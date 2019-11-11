@@ -7,7 +7,7 @@ applications:
     path: bin/Debug/netcoreapp2.2/publish
     services: []
     buildpacks:
-      - 
+      - https://github.com/macsux/certificate-buildpack/releases/download/v0.1.0/DotnetCoreCertificateBuildpack-linux-x64-0.1.0.zip
       - dotnet_core_buildpack
     env:
       SKIP_SSL_VALIDATION: "true"
