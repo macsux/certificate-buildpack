@@ -50,7 +50,7 @@ class Build : NukeBuild
     string GitHubToken;
 
     string Runtime => Stack == StackType.Windows ? "win-x64" : "linux-x64";  
-    string Framework => Stack == StackType.Windows ? "net47" : "netcoreapp2.2";
+    string Framework => Stack == StackType.Windows ? "net47" : "netcoreapp3.0";
 
 
     [Solution] readonly Solution Solution;
