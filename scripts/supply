@@ -1,3 +1,4 @@
 #!/bin/bash
+echo TEST
 BUILDPACK_DIR=`dirname $(readlink -f ${BASH_SOURCE%/*})`
 $BUILDPACK_DIR/bin/buildpack supply $@

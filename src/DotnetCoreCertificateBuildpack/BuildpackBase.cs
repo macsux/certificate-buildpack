@@ -14,6 +14,13 @@ namespace DotnetCoreCertificateBuildpack
         protected abstract bool Detect(string buildPath);
 
         /// <summary>
+        /// 
+        /// </summary>
+        protected virtual void PreStartup()
+        {
+        }
+
+        /// <summary>
         /// Logic to apply when buildpack is ran.
         /// Note that for <see cref="SupplyBuildpack"/> this will correspond to "bin/supply" lifecycle event, while for <see cref="FinalBuildpack"/> it will be invoked on "bin/finalize"
         /// </summary>
@@ -40,6 +47,9 @@ namespace DotnetCoreCertificateBuildpack
             {
                 case "detect":
                     return Detect(args[1]) ? 2 : 1;
+                case "prestartup":
+                    PreStartup();
+                    break;
             }
 
             return 0;

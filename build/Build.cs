@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using ICSharpCode.SharpZipLib.Zip;
+using Microsoft.Build.Tasks;
 using Nuke.Common;
-using Nuke.Common.BuildServers;
 using Nuke.Common.Execution;
 using Nuke.Common.Git;
 using Nuke.Common.IO;
@@ -11,10 +14,9 @@ using Nuke.Common.ProjectModel;
 using Nuke.Common.Tooling;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.GitVersion;
-using Nuke.Common.Tools.NuGet;
+using Nuke.Common.Tools.MSBuild;
 using Nuke.Common.Utilities.Collections;
 using Octokit;
-using static Nuke.Common.EnvironmentInfo;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.IO.PathConstruction;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
@@ -60,16 +62,23 @@ class Build : NukeBuild
     AbsolutePath SourceDirectory => RootDirectory / "src";
     AbsolutePath TestsDirectory => RootDirectory / "tests";
     AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
+    
+    string[] LifecycleHooks = {"detect", "supply", "release", "finalize"};
 
     Target Clean => _ => _
         .Description("Cleans up **/bin and **/obj folders")
         .Before(Restore)
         .Executes(() =>
         {
-            SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
-            TestsDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
+            DoClean();
             //EnsureCleanDirectory(ArtifactsDirectory);
         });
+
+    void DoClean()
+    {
+        SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
+        TestsDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
+    }
 
     Target Restore => _ => _
         .Description("Restores NuGet dependencies for the buildpack")
@@ -85,14 +94,15 @@ class Build : NukeBuild
         .DependsOn(Restore)
         .Executes(() =>
         {
+            
             Logger.Info(Stack);
             DotNetBuild(s => s
                 .SetProjectFile(Solution)
                 .SetConfiguration(Configuration)
                 .SetFramework(Framework)
                 .SetRuntime(Runtime)
-                .SetAssemblyVersion(GitVersion.GetNormalizedAssemblyVersion())
-                .SetFileVersion(GitVersion.GetNormalizedFileVersion())
+                .SetAssemblyVersion(GitVersion.AssemblySemVer)
+                .SetFileVersion(GitVersion.AssemblySemFileVer)
                 .SetInformationalVersion(GitVersion.InformationalVersion)
                 .EnableNoRestore());
         });
@@ -102,24 +112,39 @@ class Build : NukeBuild
         .DependsOn(Restore)
         .Executes(() =>
         {
-            DotNetPublish(s => s
-                .SetProject(Solution)
-                .SetConfiguration(Configuration)
-                .SetFramework(Framework)
-                .SetRuntime(Runtime)
-                .SetAssemblyVersion(GitVersion.GetNormalizedAssemblyVersion())
-                .SetFileVersion(GitVersion.GetNormalizedFileVersion())
-                .SetInformationalVersion(GitVersion.InformationalVersion)
-                .EnableNoRestore());
+        
+//          
             var workDirectory = TemporaryDirectory / "pack";
             EnsureCleanDirectory(TemporaryDirectory);
             var buildpackProject = Solution.GetProject(BuildpackProjectName);
             var publishDirectory = buildpackProject.Directory / "bin" / Configuration / Framework / Runtime / "publish";
             var workBinDirectory = workDirectory / "bin";
-            var scriptsDirectory = RootDirectory / "scripts";
+            
+            
+            DotNetPublish(s => s
+                .SetProject(Solution)
+                .SetConfiguration(Configuration)
+                .SetFramework(Framework)
+                .SetRuntime(Runtime)
+                .SetAssemblyVersion(GitVersion.AssemblySemVer)
+                .SetFileVersion(GitVersion.AssemblySemFileVer)
+                .SetInformationalVersion(GitVersion.InformationalVersion)
+//                .SetProperties(new Dictionary<string,object>{{"TrimUnusedDependencies","true"}})
+                .EnableNoRestore());
+
+
+
+            var lifecycleBinaries = Solution.GetProjects("Lifecycle*")
+                .Select(x => x.Directory / "bin" / Configuration / Framework / Runtime / "publish")
+                .SelectMany(x => Directory.GetFiles(x).Where(path => LifecycleHooks.Any(hook => Path.GetFileName(path).StartsWith(hook))));
+
+            foreach (var lifecycleBinary in lifecycleBinaries)
+            {
+                CopyFileToDirectory(lifecycleBinary, workBinDirectory, FileExistsPolicy.OverwriteIfNewer);
+            }
             
             CopyDirectoryRecursively(publishDirectory, workBinDirectory, DirectoryExistsPolicy.Merge);
-            CopyDirectoryRecursively(scriptsDirectory, workBinDirectory, DirectoryExistsPolicy.Merge);
+//            CopyDirectoryRecursively(scriptsDirectory, workBinDirectory, DirectoryExistsPolicy.Merge);
             var tempZipFile = TemporaryDirectory / PackageZipName;
             
             ZipFile.CreateFromDirectory(workDirectory, tempZipFile);
@@ -171,13 +196,13 @@ class Build : NukeBuild
             }
             
             var zipPackageLocation = ArtifactsDirectory / PackageZipName;
-            var releaseAssetUpload = new ReleaseAssetUpload(PackageZipName, "application/zip", File.OpenRead(zipPackageLocation), null);
+            var releaseAssetUpload = new ReleaseAssetUpload(PackageZipName, "application/zip", File.OpenRead(zipPackageLocation), TimeSpan.FromMinutes(60));
             var releaseAsset = await client.Repository.Release.UploadAsset(release, releaseAssetUpload);
             
             Logger.Block(releaseAsset.BrowserDownloadUrl);
         });
 
-    public static void MakeFilesInZipUnixExecutable(AbsolutePath zipFile)
+    public void MakeFilesInZipUnixExecutable(AbsolutePath zipFile)
     {
         var tmpFileName = zipFile + ".tmp";
         using (var input = new ZipInputStream(File.Open(zipFile, FileMode.Open)))
@@ -190,7 +215,12 @@ class Build : NukeBuild
             {
                 var outEntry = new ZipEntry(entry.Name);
                 outEntry.HostSystem = (int)HostSystemID.Unix;
-                outEntry.ExternalFileAttributes = -2115174400;
+                var entryAttributes =  ZipEntryAttributes.ReadOwner | ZipEntryAttributes.ReadOther | ZipEntryAttributes.ReadGroup;
+//                if (LifecycleHooks.Any(hook => entry.Name.EndsWith(hook)))
+                    entryAttributes = entryAttributes | ZipEntryAttributes.ExecuteOwner | ZipEntryAttributes.ExecuteOther | ZipEntryAttributes.ExecuteGroup;
+                entryAttributes = entryAttributes | (entry.IsDirectory ? ZipEntryAttributes.Directory : ZipEntryAttributes.Regular);
+//                outEntry.ExternalFileAttributes = -2115174400;
+                outEntry.ExternalFileAttributes = (int) (entryAttributes) << 16;
                 output.PutNextEntry(outEntry);
                 input.CopyTo(output);
             }
@@ -200,5 +230,35 @@ class Build : NukeBuild
 
         DeleteFile(zipFile);
         RenameFile(tmpFileName,zipFile, FileExistsPolicy.Overwrite);
+    }
+    
+    [Flags]
+    enum ZipEntryAttributes
+    {
+        ExecuteOther = 1,
+        WriteOther = 2,
+        ReadOther = 4,
+	
+        ExecuteGroup = 8,
+        WriteGroup = 16,
+        ReadGroup = 32,
+
+        ExecuteOwner = 64,
+        WriteOwner = 128,
+        ReadOwner = 256,
+
+        Sticky = 512, // S_ISVTX
+        SetGroupIdOnExecution = 1024,
+        SetUserIdOnExecution = 2048,
+
+        //This is the file type constant of a block-oriented device file.
+        NamedPipe = 4096,
+        CharacterSpecial = 8192,
+        Directory = 16384,
+        Block = 24576,
+        Regular = 32768,
+        SymbolicLink = 40960,
+        Socket = 49152,
+	
     }
 }

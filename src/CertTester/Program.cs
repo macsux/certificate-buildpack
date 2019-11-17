@@ -16,7 +16,8 @@ namespace CertTester
         public static void Main(string[] args)
         {
             var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
-            var result = store.Certificates.Find(X509FindType.FindBySerialNumber, "2CA3F406530988964A6015AACC5BA210", false);
+            store.Open(OpenFlags.ReadOnly);
+            var result = store.Certificates.Find(X509FindType.FindByThumbprint, "79248DDDCC90D0E3D616496BA8DBA330E9BD08DF", false);
             Console.WriteLine($"Found {result.Count} matching certs");
             CreateWebHostBuilder(args).Build().Run();
         }

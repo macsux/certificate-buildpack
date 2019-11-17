@@ -1,12 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.2;net47</TargetFrameworks>
+    <TargetFrameworks>netcoreapp3.0;net472</TargetFrameworks>
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
     <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
     <RootNamespace>DotnetCoreCertificateBuildpack</RootNamespace>
     <AssemblyName>buildpack</AssemblyName>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
-    
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Packaging.Tools.Trimming" Version="1.1.0-preview1-26619-01" />
+  </ItemGroup>
+
 </Project>

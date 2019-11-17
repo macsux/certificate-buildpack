@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFrameworks>netcoreapp3.0;net472</TargetFrameworks>
+        <AssemblyName>finalize</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\DotnetCoreCertificateBuildpack\DotnetCoreCertificateBuildpack.csproj" />
+    </ItemGroup>
+
+</Project>
