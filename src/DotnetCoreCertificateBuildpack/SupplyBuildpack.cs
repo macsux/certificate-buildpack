@@ -8,7 +8,7 @@ namespace DotnetCoreCertificateBuildpack
             switch (command)
             {
                 case "supply":
-                    Apply(args[1], args[2], args[3], int.Parse(args[4]));
+                    DoApply(args[1], args[2], args[3], int.Parse(args[4]));
                     break;
                 default:
                     return base.DoRun(args);

@@ -196,7 +196,8 @@ class Build : NukeBuild
             }
             
             var zipPackageLocation = ArtifactsDirectory / PackageZipName;
-            var releaseAssetUpload = new ReleaseAssetUpload(PackageZipName, "application/zip", File.OpenRead(zipPackageLocation), TimeSpan.FromMinutes(60));
+            var stream = File.OpenRead(zipPackageLocation);
+            var releaseAssetUpload = new ReleaseAssetUpload(PackageZipName, "application/zip", stream, TimeSpan.FromHours(1));
             var releaseAsset = await client.Repository.Release.UploadAsset(release, releaseAssetUpload);
             
             Logger.Block(releaseAsset.BrowserDownloadUrl);

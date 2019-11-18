@@ -16,7 +16,7 @@ namespace DotnetCoreCertificateBuildpack
             switch (command)
             {
                 case "finalize":
-                    Apply(args[1], args[2], args[3], int.Parse(args[4]));
+                    DoApply(args[1], args[2], args[3], int.Parse(args[4]));
                     break;
                 case "release":
                     Console.WriteLine("default_process_types:");

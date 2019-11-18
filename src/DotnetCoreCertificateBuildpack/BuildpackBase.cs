@@ -1,11 +1,15 @@
 using System;
 using System.Collections;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace DotnetCoreCertificateBuildpack
 {
     public abstract class BuildpackBase
     {
+        public bool IsLinux => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
         /// <summary>
         /// Determines if the buildpack is compatible and should be applied to the application being staged 
         /// </summary>
@@ -55,5 +59,33 @@ namespace DotnetCoreCertificateBuildpack
             return 0;
         }
 
+        protected void DoApply(string buildPath, string cachePath, string depsPath, int index)
+        {
+            var isPreStartOverriden = GetType().GetMethod(nameof(PreStartup), BindingFlags.Instance | BindingFlags.NonPublic).DeclaringType != typeof(BuildpackBase);
+            var buildpackDepsDir = Path.Combine(depsPath, index.ToString());
+            if (isPreStartOverriden)
+            {
+                var profiled = Path.Combine(buildPath, ".profile.d");
+                Directory.CreateDirectory(profiled);
+                // copy buildpack to deps dir so we can invoke it as part of startup
+                foreach(var file in Directory.EnumerateFiles(Path.GetDirectoryName(GetType().Assembly.Location)))
+                {
+                    File.Copy(file, Path.Combine(depsPath, Path.GetFileName(file)));
+                }
+                var prestartCommand = Path.Combine(buildpackDepsDir, this.GetType().Assembly.GetName().Name);
+                // write startup shell script to call buildpack prestart lifecycle event in deps dir
+                if (IsLinux)
+                {
+                    File.WriteAllText(Path.Combine(profiled,"startup.sh"), $"#!/bin/bash\n{prestartCommand}");
+                }
+                else
+                {
+                    prestartCommand += ".exe";
+                    File.WriteAllText(Path.Combine(profiled,"startup.bat"),prestartCommand);
+                }
+                    
+            }
+            Apply(buildPath, cachePath, depsPath, index);
+        }
     }
 }
