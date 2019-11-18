@@ -63,6 +63,7 @@ namespace DotnetCoreCertificateBuildpack
         {
             var isPreStartOverriden = GetType().GetMethod(nameof(PreStartup), BindingFlags.Instance | BindingFlags.NonPublic).DeclaringType != typeof(BuildpackBase);
             var buildpackDepsDir = Path.Combine(depsPath, index.ToString());
+            Directory.CreateDirectory(buildpackDepsDir);
             if (isPreStartOverriden)
             {
                 var profiled = Path.Combine(buildPath, ".profile.d");
@@ -70,9 +71,11 @@ namespace DotnetCoreCertificateBuildpack
                 // copy buildpack to deps dir so we can invoke it as part of startup
                 foreach(var file in Directory.EnumerateFiles(Path.GetDirectoryName(GetType().Assembly.Location)))
                 {
-                    File.Copy(file, Path.Combine(depsPath, Path.GetFileName(file)));
+                    File.Copy(file, Path.Combine(buildpackDepsDir, Path.GetFileName(file)), true);
                 }
-                var prestartCommand = Path.Combine(buildpackDepsDir, this.GetType().Assembly.GetName().Name);
+
+                var extension = !IsLinux ? ".exe" : string.Empty;
+                var prestartCommand = $"{Path.Combine(buildpackDepsDir, this.GetType().Assembly.GetName().Name)}{extension} prestart";
                 // write startup shell script to call buildpack prestart lifecycle event in deps dir
                 if (IsLinux)
                 {
@@ -80,7 +83,6 @@ namespace DotnetCoreCertificateBuildpack
                 }
                 else
                 {
-                    prestartCommand += ".exe";
                     File.WriteAllText(Path.Combine(profiled,"startup.bat"),prestartCommand);
                 }
                     
