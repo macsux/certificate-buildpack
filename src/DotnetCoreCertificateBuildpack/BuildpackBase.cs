@@ -75,15 +75,15 @@ namespace DotnetCoreCertificateBuildpack
                 }
 
                 var extension = !IsLinux ? ".exe" : string.Empty;
-                var prestartCommand = $"{Path.Combine(buildpackDepsDir, this.GetType().Assembly.GetName().Name)}{extension} prestart";
+                var prestartCommand = $"{this.GetType().Assembly.GetName().Name}{extension} prestartup";
                 // write startup shell script to call buildpack prestart lifecycle event in deps dir
                 if (IsLinux)
                 {
-                    File.WriteAllText(Path.Combine(profiled,"startup.sh"), $"#!/bin/bash\n{prestartCommand}");
+                    File.WriteAllText(Path.Combine(profiled,"startup.sh"), $"#!/bin/bash\n$DEPS_DIR/{index}/{prestartCommand}");
                 }
                 else
                 {
-                    File.WriteAllText(Path.Combine(profiled,"startup.bat"),prestartCommand);
+                    File.WriteAllText(Path.Combine(profiled,"startup.bat"),$@"%DEPS_DIR%\{index}\{prestartCommand}");
                 }
                     
             }
