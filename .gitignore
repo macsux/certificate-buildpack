@@ -259,6 +259,12 @@ paket-files/
 
 # JetBrains Rider
 # User-specific stuff
-.idea/**/
-**/.idea/**
+src/.idea/*
+riderModule.iml
+!src/.idea/.idea*/
+src/.idea/.idea*/.idea/**
+!src/.idea/.idea*/.idea/indexLayout.xml
+!src/.idea/.idea*/.idea/runConfigurations
+!src/.idea/**/.idea/indexLayout.xml
 !**/.idea/**/runConfigurations/**
+src/Cert*/.idea
