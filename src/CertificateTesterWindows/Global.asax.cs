@@ -20,6 +20,7 @@ namespace CertificateTesterWindows
             
             var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
             store.Open(OpenFlags.ReadOnly);
+            
             var result = store.Certificates.Find(X509FindType.FindByThumbprint, "79248DDDCC90D0E3D616496BA8DBA330E9BD08DF", false);
             Console.WriteLine($"Found {result.Count} matching certs");
         }
