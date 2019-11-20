@@ -131,3 +131,15 @@ You can use PFX (aka Pkcs12) or PEM based formats. If using PFX, bytes must be B
 ### Notes
 
 If generating self signed certificates (especially using Bouncy Castle), set password to empty string instead of null if you don't want to use passcode, otherwise OpenSSL provider will fail to load it when running on Linux stack.
+
+
+
+## FAQ
+
+Q: How can I populate other credentials stores
+
+A: Not supported due to security constraints of the container 
+
+Q: I need to install company's Root CA for my app
+
+A: Work with your platform team to do this through Pivotal Operations Manager (or BOSH manifest if running open source). [More info](https://docs.pivotal.io/pivotalcf/2-5/security/pcf-infrastructure/certificates-index.html)
