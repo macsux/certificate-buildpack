@@ -112,8 +112,6 @@ class Build : NukeBuild
         .DependsOn(Restore)
         .Executes(() =>
         {
-        
-//          
             var workDirectory = TemporaryDirectory / "pack";
             EnsureCleanDirectory(TemporaryDirectory);
             var buildpackProject = Solution.GetProject(BuildpackProjectName);
@@ -129,7 +127,7 @@ class Build : NukeBuild
                 .SetAssemblyVersion(GitVersion.AssemblySemVer)
                 .SetFileVersion(GitVersion.AssemblySemFileVer)
                 .SetInformationalVersion(GitVersion.InformationalVersion)
-//                .SetProperties(new Dictionary<string,object>{{"TrimUnusedDependencies","true"}})
+                //.SetProperties(new Dictionary<string,object>{{"TrimUnusedDependencies","true"}})
                 .EnableNoRestore());
 
 
