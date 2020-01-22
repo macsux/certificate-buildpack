@@ -67,7 +67,7 @@ namespace DotnetCoreCertificateBuildpack
             foreach(var certData in rawCerts.Where(x => !string.IsNullOrWhiteSpace(x.Certificate)))
             {
                 var pem = Regex.Match(certData.Certificate, "-+BEGIN CERTIFICATE-+.+?-+END CERTIFICATE-+", RegexOptions.Singleline);
-                var key = certData.Certificate != null ? Regex.Match(certData.Certificate, "-+BEGIN RSA PRIVATE KEY-+.+?-+END RSA PRIVATE KEY-+", RegexOptions.Singleline)?.Value : null;
+                var key = certData.Certificate != null ? Regex.Match(certData.Certificate, "-+BEGIN (RSA|ENCRYPTED) PRIVATE KEY-+.+?-+END (RSA|ENCRYPTED) PRIVATE KEY-+", RegexOptions.Singleline)?.Value : null;
                 MS509.X509Certificate2 cert = null;
                 
                 try
